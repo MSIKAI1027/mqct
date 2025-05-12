@@ -40,6 +40,7 @@
 <script>
   const client = mqtt.connect('wss://broker.mqttgo.io:8084/mqtt')
   const gpioPins = [2,4,5,12,13,14,15,18,19,21]
+  let currentStatus = []
 
   client.on('connect', () => {
     console.log('MQTT Connected')
@@ -49,7 +50,11 @@
 
   client.on('message', (topic, message) => {
     const payload = JSON.parse(message.toString())
-    if (topic === 'esp32/status') renderStatus(payload)
+    if (topic === 'esp32/status') {
+      currentStatus = payload.io
+      renderStatus(payload)
+      renderControl(payload)
+    }
   })
 
   function renderStatus(data) {
@@ -66,8 +71,32 @@
     })
   }
 
+  function renderControl(data) {
+    const controlArea = document.getElementById('control-area')
+    controlArea.innerHTML = ''
+    data.io.forEach((item, index) => {
+      const div = document.createElement('div')
+      div.className = 'mb-2'
+      let statusText = item.mode === 'output' ? (item.state ? 'ON' : 'OFF') : '讀取中...'
+      div.innerHTML = `
+        <div class="card p-3">
+          <h5>GPIO ${item.gpio}</h5>
+          <p>模式：${item.mode.toUpperCase()} | 狀態：<span id="state-${index}">${statusText}</span></p>
+          ${item.mode === 'output' ? `<button class="btn btn-primary" onclick="toggleGPIO(${index})">切換狀態</button>` : ''}
+        </div>
+      `
+      controlArea.appendChild(div)
+    })
+  }
+
   function updateMode(index, mode) {
     client.publish('esp32/set_config', JSON.stringify({ index, mode }))
+  }
+
+  function toggleGPIO(index) {
+    const gpio = currentStatus[index].gpio
+    const newState = !currentStatus[index].state
+    client.publish('esp32/control_gpio', JSON.stringify({ gpio, state: newState }))
   }
 </script>
 
