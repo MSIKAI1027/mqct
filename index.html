@@ -60,6 +60,10 @@
   function renderStatus(data) {
     const ioTable = document.getElementById('io-table')
     ioTable.innerHTML = ''
+    if (!data || !Array.isArray(data.io)) {
+    console.warn("Invalid data format:", data);
+    return;
+    }
     data.io.forEach((item, index) => {
       const row = document.createElement('tr')
       row.innerHTML = `<td>${index + 1}</td><td>${item.gpio}</td>
